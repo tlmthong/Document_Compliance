@@ -1,0 +1,27 @@
+# Requirements for RegCompliance Application
+# Base
+fastapi>=0.100.0
+uvicorn>=0.23.0
+requests==2.27.1 
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# PostgreSQL with pgvector
+psycopg2-binary>=2.9.0
+pgvector>=0.2.0
+numpy>=1.20.0
+
+# OpenAI
+openai>=1.0.0
+
+# Additional utilities
+json-numpy>=1.0.1
+
+# LangChain for text splitting
+langchain-text-splitters>=0.0.1
+
+# ML/Embeddings
+transformers>=4.30.0
+FlagEmbedding>=1.2.0
+torch>=2.0.0
+scikit-learn>=1.0.0

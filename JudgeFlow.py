@@ -1,14 +1,14 @@
+import os
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from pathlib import Path
 import json
-import sqlite3
-import sqlite_vec
-import struct
+from db_config import get_connection, vector_to_list
 
 BASE_DIR = Path(__file__).resolve().parent
-judge_url = "http://127.0.0.1:8000/judge"
+POLICY_API_HOST = os.environ.get("POLICY_API_HOST", "http://127.0.0.1:8000")
+judge_url = f"{POLICY_API_HOST}/judge"
 
 app = FastAPI()
 
@@ -22,83 +22,84 @@ app.add_middleware(
 )
 
 
-def blob_to_f32list(b: bytes, dim: int = 1024):
-    return list(struct.unpack(f"{dim}f", b))
-
-
-def f32blob(vec):
-    return struct.pack(f"{len(vec)}f", *vec)  # len(vec) must be 1024
-
-
 def feed_json(policy_id="Test3"):
-    db = sqlite3.connect("data/policy.db")
-    db.enable_load_extension(True)
-    sqlite_vec.load(db)
-    db.enable_load_extension(False)
-    rows = db.execute(
-        f"""
-        SELECT * FROM policy 
-        """
-    ).fetchall()
-    print(rows)
-    rows = db.execute(
-        f"""
-        SELECT * FROM sel_fact WHERE policy_id = "{policy_id}"
-        """
-    ).fetchall()
-    print(rows)
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM policy")
+    rows = cur.fetchall()
+    print("Policies:", rows)
+
+    cur.execute("SELECT * FROM sel_fact WHERE policy_id = %s", (policy_id,))
+    rows = cur.fetchall()
+    print("Self facts:", rows)
+    # Column order: id, policy_id, fact, embedding
     self_fact = [x[2] for x in rows]
 
-    rows = db.execute(
-        f"""
-        SELECT embedding FROM sel_fact_vec sv JOIN sel_fact s on sv.rowid = s.id WHERE s.policy_id = "{policy_id}" 
+    cur.execute(
         """
+        SELECT embedding FROM sel_fact 
+        WHERE policy_id = %s AND embedding IS NOT NULL
+    """,
+        (policy_id,),
     )
-    self_fact_embed = [blob_to_f32list(x[0]) for x in rows]
+    rows = cur.fetchall()
+    self_fact_embed = [vector_to_list(x[0]) for x in rows]
 
-    rows = db.execute(
-        f"""
-        SELECT id FROM law_unit where policy_id = "{policy_id}" 
-        """
-    )
-    print(rows)
+    cur.execute("SELECT id FROM law_unit WHERE policy_id = %s", (policy_id,))
+    rows = cur.fetchall()
+    print("Law units:", rows)
     law_id_list = [x[0] for x in rows]
     decisions = []
 
     for law_id in law_id_list:
-        print(law_id)
-        rows = db.execute(
-            f"""
-            SELECT content FROM law_unit where policy_id = "{policy_id}" AND id = "{law_id}" 
+        print("Processing law_id:", law_id)
+
+        cur.execute(
             """
+            SELECT content FROM law_unit 
+            WHERE policy_id = %s AND id = %s
+        """,
+            (policy_id, law_id),
         )
-        content = [x[0] for x in rows][0]  # SHOULD ONLY HAVE ONLY ONE CONTENT
+        rows = cur.fetchall()
+        content = rows[0][0]  # SHOULD ONLY HAVE ONLY ONE CONTENT
 
         # get reference
-        rows = db.execute(
-            f"""
-            SELECT reference from law_references WHERE law_unit_id = "{law_id}" AND policy_id = "{policy_id}"
+        cur.execute(
             """
+            SELECT reference FROM law_references 
+            WHERE law_unit_id = %s AND policy_id = %s
+        """,
+            (law_id, policy_id),
         )
-        references = [x[0] for x in rows]
+        references = [x[0] for x in cur.fetchall()]
 
         # get cross-reference
-        rows = db.execute(
-            f"""
-            SELECT cross_reference from law_cross_references WHERE law_unit_id = "{law_id}" AND policy_id = "{policy_id}"
+        cur.execute(
             """
+            SELECT cross_reference FROM law_cross_references 
+            WHERE law_unit_id = %s AND policy_id = %s
+        """,
+            (law_id, policy_id),
         )
-        cross_references = [x[0] for x in rows]
+        cross_references = [x[0] for x in cur.fetchall()]
 
         # get embed
-        rows = db.execute(
-            f"""    
-            SELECT embedding from hiq_vec hv JOIN hiq h ON hv.rowid = h.id WHERE h.policy_id = "{policy_id}" AND h.law_unit_id = "{law_id}"
+        cur.execute(
             """
+            SELECT embedding FROM hiq 
+            WHERE policy_id = %s AND law_unit_id = %s AND embedding IS NOT NULL
+        """,
+            (policy_id, law_id),
         )
-        embed = [blob_to_f32list(x[0]) for x in rows]
+        embed = [vector_to_list(x[0]) for x in cur.fetchall()]
 
         decisions.append((law_id, content, references, cross_references, embed))
+
+    cur.close()
+    conn.close()
+
     return {
         "id": policy_id,
         "self_fact": self_fact,
@@ -160,4 +161,4 @@ async def judge(policy_id: str, user_json: Dict[str, Any]):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=6969)
+    uvicorn.run(app, host="0.0.0.0", port=6969)

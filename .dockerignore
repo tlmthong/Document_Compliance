@@ -1,0 +1,41 @@
+# Docker ignore file
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Data and logs (will be mounted as volumes)
+data/
+logs/
+*.log
+
+# Environment files with secrets
+.env
+
+# Test files
+test_*.json
+*.test.py
+
+# Documentation
+*.md
+LICENSE
+
+# Old SQLite files
+*.db

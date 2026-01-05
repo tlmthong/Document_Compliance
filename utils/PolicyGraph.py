@@ -19,11 +19,14 @@ EMBED_MODEL = BGEM3FlagModel("BAAI/bge-m3")
 HAS_EMBEDDINGS = True
 
 # MODEL_ID = "gpt-oss:120b-cloud"
-MODEL_ID = "gemini-3-flash-preview:cloud"
-BASE_URL = "http://localhost:11434/v1"
+MODEL_ID = os.environ.get("LLM_MODEL_ID", "gemini-3-flash-preview:cloud")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+BASE_URL = f"{OLLAMA_HOST}/v1"
 LLM = OpenAI(
     base_url=BASE_URL,
-    api_key="eb8c507c1e284d8f9bf5867f42b6cd8b.saBEZsoabpJuz3J6pIwAW1uk",
+    api_key=os.environ.get(
+        "LLM_API_KEY", "eb8c507c1e284d8f9bf5867f42b6cd8b.saBEZsoabpJuz3J6pIwAW1uk"
+    ),
 )
 
 

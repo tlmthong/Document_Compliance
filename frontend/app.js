@@ -1,6 +1,8 @@
 // API Configuration
-const PROCESS_FLOW_URL = 'http://127.0.0.1:6868';
-const JUDGE_FLOW_URL = 'http://127.0.0.1:6969';
+// Detect if running in Docker (through nginx) or locally
+const isDocker = window.location.port === '' || window.location.port === '80';
+const PROCESS_FLOW_URL = isDocker ? '/api/process' : 'http://127.0.0.1:6868';
+const JUDGE_FLOW_URL = isDocker ? '/api/judge' : 'http://127.0.0.1:6969';
 
 // Initialize field counter
 let fieldCounter = 0;

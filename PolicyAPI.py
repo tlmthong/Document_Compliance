@@ -21,12 +21,16 @@ class Payload(BaseModel):
 
 # LLM Configuration
 # MODEL_ID = "gpt-oss:120b-cloud"
-MODEL_ID = "gpt-oss:120b-cloud"
+MODEL_ID = os.environ.get("LLM_MODEL_ID", "gpt-oss:120b-cloud")
 # MODEL_ID = "gemini-3-flash-preview:cloud"
-BASE_URL = "http://localhost:11434/v1"
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+BASE_URL = f"{OLLAMA_HOST}/v1"
 PROMPT_URL = "prompts/promp_fact_vi.txt"
 PROMPT_JUDGE_URL = "prompts/prompt_judge_vi.txt"
-API_KEY = "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"
+API_KEY = os.environ.get(
+    "LLM_API_KEY",
+    "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",
+)
 
 llm = OpenAI(
     base_url=BASE_URL,
@@ -450,9 +454,9 @@ async def process_segment(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 #     text = """
-# Điều 1. Mức lãi suất tối đa đối với tiền gửi bằng đồng Việt Nam của tổ chức (trừ tổ chức tín dụng, chi nhánh ngân hàng nước ngoài) và cá nhân tại tổ chức tín dụng, chi nhánh ngân hàng nước ngoài theo quy định tại Thông tư số 48/2024/TT-NHNN ngày 30 tháng 9 năm 2024 như sau:
+# Điều 1.1.2 Mức lãi suất tối đa đối với tiền gửi bằng đồng Việt Nam của tổ chức (trừ tổ chức tín dụng, chi nhánh ngân hàng nước ngoài) và cá nhân tại tổ chức tín dụng, chi nhánh ngân hàng nước ngoài theo quy định tại Thông tư số 48/2024/TT-NHNN ngày 30 tháng 9 năm 2024 như sau:
 # Điều 1. Điều 1.
 # 1. Mức lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 0,5%/năm.
 

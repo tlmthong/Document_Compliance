@@ -1,31 +1,19 @@
+import os
 import requests
 from pathlib import Path
 import json
-import sqlite3
-import sqlite_vec
-import struct
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from db_config import get_connection, list_to_vector, vector_to_list
 
 
 BASE_DIR = Path(__file__).resolve().parent
-HOST = "http://127.0.0.1:8000"
+HOST = os.environ.get("POLICY_API_HOST", "http://127.0.0.1:8000")
 
 segment_url = HOST + "/segment"
 self_fact_url = HOST + "/self_fact"
 process_policy_url = HOST + "/process_policy"
 judge_url = HOST + "/judge"
-
-
-DIM = 1024
-
-
-def blob_to_f32list(b: bytes, dim: int = DIM):
-    return list(struct.unpack(f"{dim}f", b))
-
-
-def f32blob(vec):
-    return struct.pack(f"{len(vec)}f", *vec)  # len(vec) must be 1024
 
 
 def segment_document(file_path):
@@ -59,198 +47,190 @@ def process_policy(segments, self_fact, policy_id: str = "Test", subject: str = 
     return r_json
 
 
-def store_to_db(process_policy_json, connection="data/policy.db"):
+def store_to_db(process_policy_json):
     p_json = process_policy_json
     policy_id = p_json["id"]
     self_fact = p_json["self_fact"]
     self_fact_embed = p_json["self_fact_embed"]
     laws = p_json["decisions"]
 
-    # Database Connection
-    db = sqlite3.connect(connection)
-    db.enable_load_extension(True)
-    sqlite_vec.load(db)
-    db.enable_load_extension(False)
+    conn = get_connection()
+    cur = conn.cursor()
 
-    # CHECK IF POLICY EXIST
-    cur = db.cursor()
+    try:
+        # CHECK IF POLICY EXIST
+        cur.execute("SELECT 1 FROM policy WHERE id = %s", (policy_id,))
+        rows = cur.fetchall()
+        if len(rows) > 0:
+            print("skipping - policy already exists")
+            return
 
-    rows = cur.execute(
-        f"""
-        SELECT 1 FROM policy where id = "{policy_id}" 
-        """
-    ).fetchall()
-    if len(rows) > 0:
-        print("skipping")
-        return
-
-    # Insert Policy
-    cur.execute(
-        """
-        INSERT INTO policy (id, subject, content)
-        VALUES (?, ?, ?)
-        """,
-        (policy_id, "test", "test"),
-    )
-
-    # INSERT self_facts
-    for fact, embed in zip(self_fact, self_fact_embed):
-        print("Fact: ", fact)
-        cur.execute(
-            f"""
-            INSERT INTO sel_fact (policy_id, fact) VALUES (?, ?)
-        """,
-            (policy_id, fact),
-        )
-        fact_id = cur.lastrowid
-        cur.execute(
-            "INSERT INTO sel_fact_vec (rowid, embedding) VALUES (?, ?)",
-            (fact_id, f32blob(embed)),
-        )
-
-    # INSERT LAW
-    for law in laws:
-        law_id = law["id"]
-        law_content = law["content"]
-        law_reference = law["references"]
-        law_cross_reference = law["cross_references"]
-        law_hyp_embed = law["hypothetical_embed"]
-        law_hyp_questions = law["hypothetical_questions"]
-
-        # ADD LAW
+        # Insert Policy
         cur.execute(
             """
-            INSERT INTO law_unit (id, policy_id, content) VALUES(?,?,?)
-        """,
-            (law_id, policy_id, law_content),
+            INSERT INTO policy (id, subject, content)
+            VALUES (%s, %s, %s)
+            """,
+            (policy_id, "test", "test"),
         )
 
-        # ADD cross_references
-        for cr in law_cross_reference:
+        # INSERT self_facts with embeddings
+        for fact, embed in zip(self_fact, self_fact_embed):
+            print("Fact: ", fact)
             cur.execute(
                 """
-                INSERT INTO law_cross_references (law_unit_id,policy_id, cross_reference) VALUES(?,?,?)
+                INSERT INTO sel_fact (policy_id, fact, embedding) 
+                VALUES (%s, %s, %s)
                 """,
-                (law_id, policy_id, cr),
+                (policy_id, fact, list_to_vector(embed)),
             )
 
-        # ADD rereference:
-        for r in law_reference:
+        # INSERT LAW
+        for law in laws:
+            law_id = law["id"]
+            law_content = law["content"]
+            law_reference = law["references"]
+            law_cross_reference = law["cross_references"]
+            law_hyp_embed = law["hypothetical_embed"]
+            law_hyp_questions = law["hypothetical_questions"]
+
+            # ADD LAW
             cur.execute(
                 """
-                INSERT INTO law_references (law_unit_id,policy_id, reference) VALUES(?,?,?)
+                INSERT INTO law_unit (id, policy_id, content) VALUES(%s, %s, %s)
                 """,
-                (law_id, policy_id, r[0]),
+                (law_id, policy_id, law_content),
             )
 
-        # ADD EMBED:
-        for h, e in zip(law_hyp_questions, law_hyp_embed):
-            cur.execute(
-                "INSERT INTO hiq (law_unit_id, policy_id, hypothetical_question) VALUES (?,?,?)",
-                (law_id, policy_id, h),
-            )
-            h_id = cur.lastrowid
-            cur.execute(
-                """
-                INSERT INTO hiq_vec (rowid, embedding) VALUES(?,?);
-                """,
-                (h_id, f32blob(e)),
-            )
-    db.commit()
-    return 1
+            # ADD cross_references
+            for cr in law_cross_reference:
+                cur.execute(
+                    """
+                    INSERT INTO law_cross_references (law_unit_id, policy_id, cross_reference) 
+                    VALUES(%s, %s, %s)
+                    """,
+                    (law_id, policy_id, cr),
+                )
+
+            # ADD reference
+            for r in law_reference:
+                cur.execute(
+                    """
+                    INSERT INTO law_references (law_unit_id, policy_id, reference) 
+                    VALUES(%s, %s, %s)
+                    """,
+                    (law_id, policy_id, r[0]),
+                )
+
+            # ADD hypothetical questions with embeddings
+            for h, e in zip(law_hyp_questions, law_hyp_embed):
+                cur.execute(
+                    """
+                    INSERT INTO hiq (law_unit_id, policy_id, hypothetical_question, embedding) 
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (law_id, policy_id, h, list_to_vector(e)),
+                )
+
+        conn.commit()
+        return 1
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
 
 
 def check_db(num):
-    db = sqlite3.connect("data/policy.db")
-    db.enable_load_extension(True)
-    sqlite_vec.load(db)
-    db.enable_load_extension(False)
+    conn = get_connection()
+    cur = conn.cursor()
 
-    rows = db.execute(
-        """
-        SELECT * FROM policy
-        """
-    ).fetchall()
+    cur.execute("SELECT * FROM policy")
+    rows = cur.fetchall()
+    print("Policies:", rows)
 
-    print(rows)
+    cur.execute("SELECT * FROM sel_fact")
+    rows = cur.fetchall()
+    print("Self facts:", rows)
 
-    rows = db.execute(
+    cur.execute(
         """
-        SELECT * FROM sel_fact
-        """
-    ).fetchall()
+        SELECT fact FROM sel_fact sf 
+        JOIN policy p ON sf.policy_id = p.id 
+        WHERE p.id = 'TEST_HAAH'
+    """
+    )
+    rows = cur.fetchall()
+    print("Facts for TEST_HAAH:", rows)
 
-    print(rows)
-
-    rows = db.execute(
+    cur.execute(
         """
-        SELECT fact FROM sel_fact sf JOIN policy p on sf.policy_id = p.id WHERE p.id = 'TEST_HAAH';
-        """
-    ).fetchall()
+        SELECT l.id, l.content FROM law_unit l 
+        JOIN policy p ON l.policy_id = p.id 
+        WHERE p.id = 'TEST_HAAH'
+    """
+    )
+    rows = cur.fetchall()
+    print("Law units for TEST_HAAH:", rows)
 
-    print(rows)
+    cur.execute("SELECT * FROM hiq")
+    rows = cur.fetchall()
+    print("HIQ:", rows)
 
-    rows = db.execute(
+    cur.execute(
         """
-        SELECT l.id, l.content FROM law_unit l JOIN policy p on l.policy_id = p.id WHERE p.id = 'TEST_HAAH';
-        """
-    ).fetchall()
+        SELECT l.id, h.hypothetical_question 
+        FROM law_unit l 
+        JOIN hiq h ON l.policy_id = h.policy_id AND l.id = h.law_unit_id
+    """
+    )
+    rows = cur.fetchall()
+    print("Law unit hypothetical questions:", rows)
 
-    print(rows)
-
-    rows = db.execute(
+    cur.execute(
         """
-        SELECT * FROM hiq
-        """
-    ).fetchall()
-
-    print(rows)
-
-    rows = db.execute(
-        """
-        SELECT l.id, h.hypothetical_question FROM law_unit l JOIN hiq h ON l.policy_id = h.policy_id AND l.id = h.law_unit_id;
-        """
-    ).fetchall()
-    print(rows)
-
-    rows = db.execute(
-        """
-        SELECT he.embedding, h.hypothetical_question FROM hiq_vec he JOIN hiq h ON h.id = he.rowid ;
-        """
-    ).fetchall()
-    print(rows)
-
-    # print(rows)
-    def blob_to_f32list(b: bytes, dim: int = 1024):
-        return list(struct.unpack(f"{dim}f", b))
-
-    def f32blob(vec):
-        return struct.pack(f"{len(vec)}f", *vec)  # len(vec) must be 1024
+        SELECT h.embedding, h.hypothetical_question 
+        FROM hiq h 
+        WHERE h.embedding IS NOT NULL
+    """
+    )
+    rows = cur.fetchall()
+    print("HIQ with embeddings:", rows)
 
     # POLICY CHECK PROCESSED
     policy_check = "TEST_HAAH"
 
-    rows = db.execute(
-        f"""SELECT 1 FROM policy WHERE id = "{policy_check}" """
-    ).fetchall()
-    print(len(rows) == 1)
-    list_self_fact_raw = db.execute(
-        f""" SELECT fact from sel_fact s JOIN policy p on s.policy_id = p.id WHERE p.id = "{policy_check}"
-                                """
-    ).fetchall()
+    cur.execute("SELECT 1 FROM policy WHERE id = %s", (policy_check,))
+    rows = cur.fetchall()
+    print("Policy exists:", len(rows) == 1)
 
-    list_self_fact = [x[0] for x in list_self_fact_raw]
-    print(list_self_fact)
+    cur.execute(
+        """
+        SELECT fact FROM sel_fact s 
+        JOIN policy p ON s.policy_id = p.id 
+        WHERE p.id = %s
+    """,
+        (policy_check,),
+    )
+    rows = cur.fetchall()
+    list_self_fact = [x[0] for x in rows]
+    print("Self facts:", list_self_fact)
 
     # LIST EMBED
-    list_embed_raw = db.execute(
-        f"""
-                            SELECT embedding FROM sel_fact_vec se where se.rowid IN
-    (SELECT s.id from sel_fact s JOIN policy p on s.policy_id = p.id WHERE p.id = "{policy_check}")
-    """
-    ).fetchall()
-    list_embed_decode = [blob_to_f32list(embed[0]) for embed in list_embed_raw]
-    print(len(list_embed_decode))
+    cur.execute(
+        """
+        SELECT embedding FROM sel_fact 
+        WHERE policy_id = %s AND embedding IS NOT NULL
+    """,
+        (policy_check,),
+    )
+    rows = cur.fetchall()
+    list_embed_decode = [vector_to_list(embed[0]) for embed in rows]
+    print("Number of embeddings:", len(list_embed_decode))
+
+    cur.close()
+    conn.close()
 
 
 def judge(process_policy_json, documnet_url: str = "Documents/scanned_doc.json"):
@@ -393,4 +373,4 @@ async def process_policy_flow(policy_id, subject, file: UploadFile):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=6868)
+    uvicorn.run(app, host="0.0.0.0", port=6868)
