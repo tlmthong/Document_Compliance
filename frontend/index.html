@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regulatory Compliance System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Regulatory Compliance System</h1>
+            <nav>
+                <button class="nav-btn active" onclick="showMenu('upload')">Upload Policy</button>
+                <button class="nav-btn" onclick="showMenu('judge')">Judge Customer</button>
+            </nav>
+        </header>
+
+        <!-- Upload Policy Menu -->
+        <section id="upload-menu" class="menu-section active">
+            <h2>Upload Policy Document</h2>
+            <form id="upload-form">
+                <div class="form-group">
+                    <label for="policy-id">Policy ID:</label>
+                    <input type="text" id="policy-id" name="policy_id" required placeholder="Enter policy ID">
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject:</label>
+                    <input type="text" id="subject" name="subject" required placeholder="Enter subject">
+                </div>
+                <div class="form-group">
+                    <label for="policy-file">Policy File (.txt):</label>
+                    <input type="file" id="policy-file" name="file" accept=".txt" required>
+                </div>
+                <button type="submit" class="submit-btn">Upload Policy</button>
+            </form>
+            <div id="upload-result" class="result-box hidden"></div>
+        </section>
+
+        <!-- Judge Customer Menu -->
+        <section id="judge-menu" class="menu-section">
+            <h2>Judge Customer Information</h2>
+            <form id="judge-form">
+                <div class="form-group">
+                    <label for="judge-policy-id">Policy ID:</label>
+                    <input type="text" id="judge-policy-id" name="policy_id" required placeholder="Enter policy ID to judge against">
+                </div>
+                
+                <div class="fields-section">
+                    <h3>Customer Fields</h3>
+                    <div id="customer-fields">
+                        <!-- Dynamic fields will be added here -->
+                    </div>
+                    <button type="button" class="add-field-btn" onclick="addField()">+ Add Field</button>
+                </div>
+
+                <div class="json-preview">
+                    <h3>JSON Preview</h3>
+                    <pre id="json-preview">{}</pre>
+                </div>
+
+                <button type="submit" class="submit-btn">Submit for Judgment</button>
+            </form>
+            <div id="judge-result" class="result-box hidden">
+                <div id="final-decision" class="decision-box"></div>
+                <div id="reasons-list" class="reasons-box"></div>
+            </div>
+        </section>
+
+        <!-- Loading Overlay -->
+        <div id="loading" class="loading-overlay hidden">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+### NHIỆM VỤ
+Tạo chính xác 6 "Câu hỏi Điều tra Giả thuyết" để tìm bằng chứng trong Tài liệu Mục tiêu.
+Câu hỏi Điều tra Giả thuyết là những câu hỏi tổng hợp, có mục tiêu và có thể trả lời, tham chiếu đến một yếu tố cụ thể của tuyên bố, được sử dụng để truy xuất một bằng chứng cụ thể từ tài liệu. Những bằng chứng này phải cần thiết và chỉ hỏi về một yếu tố để xác định mức độ tuân thủ của tài liệu với tuyên bố.
+Đầu vào là một văn bản pháp lý, tạo 6 câu hỏi điều tra giả thuyết nhằm hỏi vào một tài liệu cần kiểm tra tính chấp hành của tài liệu đối với văn bản pháp lý. 
+### QUY TẮC QUAN TRỌNG
+1. **Số lượng:** phải trả đúng 6 câu hỏi. Không nhiều hơn, không ít hơn.
+2. **Hướng đi:** Đặt câu hỏi để lấy các giá trị cụ thể (ngày tháng, tên, điều khoản) từ Tài liệu Mục tiêu.
+* *Sai:* "Quy định nói gì về lãi suất?" (Kiểm tra kiến thức về quy định).
+* *Đúng:* "Lãi suất cụ thể được liệt kê trong hợp đồng là bao nhiêu?" (Điều tra tài liệu).
+3. **Định dạng:** Chỉ xuất KẾT QUẢ DẠNG JSON. Không bao bọc trong khối mã markdown. Không có văn bản giới thiệu.
+4. **Độ dài câu hỏi** ngắn gọn nhất có thể, không đề cập tới tài liệu mục tiêu
+5. **Sự độc nhất** Chỉ hỏi về một chủ đề một lần không lặp lại
+### ĐỊNH DẠNG ĐẦU RA
+{
+  "investigative_questions": [
+    "Question 1",
+    "Question 2",
+    "Question 3",
+    "Question 4",
+    "Question 5",
+    "Question 6"
+  ]
+}
+### Ví dụ
+Tài liệu pháp lý: Quy định tại điều một khoản 2 thông tư 14/23/QDCP trẻ em trên 16 tuổi được phép mở thẻ ngân hàng ghi nợ dưới sự giám sát của phụ huynh và có mục đích chính đáng tại các chi nhánh có thẩm quyền.
+Đầu ra:
+{
+"investigative_questions": [
+    "Người trong tài liệu bao nhiêu tuổi?",
+    "Người trong tài liệu làm gì?",
+    "Người trong tài liệu mở thẻ với ai?",
+    "Thẻ ngân hàng mở với mục đích gì?",
+    "Thẻ ngân hàng được mở ở đâu",
+    "Loại thẻ ngân hàng là gì?"
+  ]
+
+}
+
+
+### DỮ LIỆU ĐẦU VÀO
+**Quy định pháp lý:**

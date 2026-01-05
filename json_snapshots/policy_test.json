@@ -1,0 +1,59 @@
+{
+  "compliance_units": [
+    {
+      "id": "P1",
+      "subject": "developer",
+      "constraint": [
+        "must not represents and warrants it designed and owns the proprietary software known as 'BioTrack'"
+      ],
+      "context": "ownership and background of the licensed software",
+      "references": ["P2", "P3"]
+    },  
+    {
+      "id": "P2",
+      "subject": "client",
+      "constraint": [
+        "is granted a license to use 'BioTrack' solely to manage its warehouse operations"
+      ],
+      "context": "license purpose limitation for the client",
+      "references": ["P4", "P5"]
+    },
+    {
+      "id": "P3",
+      "subject": "client",
+      "constraint": [
+        "must not claim ownership of 'BioTrack' or any derivative works",
+        "must not remove or obscure proprietary notices on 'BioTrack'"
+      ],
+      "context": "intellectual property protection and attribution",
+      "references": ["P1", "P4"]
+    },
+    {
+      "id": "P4",
+      "subject": "client",
+      "constraint": [
+        "must keep the developer's confidential information confidential in accordance with the Non-Disclosure Agreement dated January 14, 2023"
+      ],
+      "context": "continuing confidentiality obligations under the prior NDA",
+      "references": ["P6"]
+    },
+    {
+      "id": "P5",
+      "subject": "client",
+      "constraint": [
+        "may use 'BioTrack' only within the North American region"
+      ],
+      "context": "geographic scope of the license",
+      "references": ["P2"]
+    },
+    {
+      "id": "P6",
+      "subject": "parties",
+      "constraint": [
+        "agree to formalize and govern their commercial relationship under the terms of this Master Services Agreement"
+      ],
+      "context": "agreement framework and intent to be bound",
+      "references": ["P2", "P4"]
+    }
+  ]
+}

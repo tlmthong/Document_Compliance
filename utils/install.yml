@@ -1,0 +1,16 @@
+name: rag-env
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - pip
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pip:
+      - openai
+      - langchain
+      - FlagEmbedding
+      - deep-translator

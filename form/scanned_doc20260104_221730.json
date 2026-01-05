@@ -1,0 +1,9 @@
+{
+    "customer name": "ABC",
+    "Term": "1 months",
+    "Amount in gross": "500,000,000",
+    "Date of issue": "22/04/2022",
+    "Deposit Method": "Cash",
+    "Interest Rate": "5% p.a",
+    "Rollover type": "Auto"
+}

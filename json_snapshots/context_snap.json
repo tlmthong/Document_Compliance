@@ -1,0 +1,39 @@
+{
+  "extracted_data": [
+    {
+      "relation": {
+        "subject": "Chief of the Office",
+        "relationship": "responsible_for_implementing",
+        "object": "this Decision"
+      }
+    },
+    {
+      "relation": {
+        "subject": "Director of the Monetary Policy Department",
+        "relationship": "responsible_for_implementing",
+        "object": "this Decision"
+      }
+    },
+    {
+      "relation": {
+        "subject": "heads of units under the State Bank of Vietnam",
+        "relationship": "responsible_for_implementing",
+        "object": "this Decision"
+      }
+    },
+    {
+      "relation": {
+        "subject": "credit institutions",
+        "relationship": "responsible_for_implementing",
+        "object": "this Decision"
+      }
+    },
+    {
+      "relation": {
+        "subject": "branches of foreign banks",
+        "relationship": "responsible_for_implementing",
+        "object": "this Decision"
+      }
+    }
+  ]
+}

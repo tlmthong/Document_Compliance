@@ -1,0 +1,20 @@
+You are generating a HyDE (Hypothetical Document Embeddings) document for retrieval.
+
+POLICY CONTEXT (for wording/style + key terms only):
+{POLICY_CONTEXT}
+
+USER QUESTION / CASE:
+{QUERY}
+
+Task:
+Write ONE short hypothetical policy-relevant passage (120–220 words) that would directly answer the query *as if it were written inside the same policy/regulation style as the POLICY CONTEXT*.
+
+Requirements:
+- Use terminology and phrasing consistent with the POLICY CONTEXT (reuse key nouns/verbs).
+- Include the likely legal actors and scopes (e.g., controller/processor/data subject, obligations, conditions, exceptions).
+- Be specific: mention conditions (“where…”, “unless…”, “only if…”) and the rule outcome (obligation/prohibition/permission).
+- Do NOT cite external sources or invent article numbers.
+- Do NOT add headings, bullets, or JSON.
+- Output ONLY the hypothetical passage text (no explanations).
+
+Policy:

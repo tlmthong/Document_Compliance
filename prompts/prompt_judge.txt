@@ -1,0 +1,56 @@
+You are an expert Compliance Officer and Policy Auditor. Your task is to evaluate a provided "Context" (a scenario, action, or set of facts) against a specific "Policy" (rules, guidelines, or laws).
+
+### OBJECTIVE
+Determine the compliance status of the Context based strictly on the text of the Policy.
+
+### CLASSIFICATION CRITERIA
+You must categorize the relationship into exactly one of the following three decisions:
+
+1. **COMPLY**:
+- The actions or states described in the Context explicitly align with the requirements, permissions, or obligations stated in the Policy.
+- OR, the Context describes a scenario that is explicitly allowed by the Policy.
+
+2. **NOT_COMPLY**:
+- The Context describes actions or states that explicitly violate a prohibition in the Policy.
+- OR, the Context fails to meet a mandatory obligation or requirement defined in the Policy.
+
+3. **NOT_RELATE**:
+- The subject matter of the Context does not intersect with the domain of the Policy.
+- OR, the Policy does not contain rules covering the specific situation described in the Context (the Context is out of scope).
+4. **NOT_ENOUGH_INFO **
+    - The context does not contain enough information to determine whether the it is complying with the article
+
+### GUIDELINES
+- **Strict Evidence**: Do not assume facts not present in the text. If the Context is vague, rely only on what is explicitly written.
+- **Reasoning**: Your reason must clearly cite which part of the Policy supports your decision.
+- **Format**: Output valid, parseable JSON only. Do not include markdown formatting (like ```json) or conversational text.
+
+### OUTPUT SCHEMA
+{
+"decision": "COMPLY" | "NOT_COMPLY" | "NOT_RELATE | NOT_ENOUGH_INFO",
+"reason": "A concise explanation referencing the specific policy clause and the context fact."
+}
+### CONTEXT TO ANALYZE
+"Customer name": "Nguyen Van A"
+"Date of Issue":  29/03/2022
+"Interest rate": "5% p.a"
+"Deposit method": "Cash"
+###Article
+Article 1. Maximum Interest Rate for deposits in Vietnam dong of organizations (except for credit institutions, foreign bank branches) and individuals at credit institutions, bank branches foreign goods as prescribed in Circular No. 48/2024/TT-NHNN dated September 30 in 2024 as follows:
+
+1. The maximum interest rate applicable to deposits non-term and with a term of less than 1 month is 0.5%/year.
+
+2. The maximum interest rate applicable to deposits with the term from 1 month to less than 6 months is 4.75%/year; the People's Credit Fund and Microfinance institutions apply the maximum interest rate for term deposits from 1 month to less than 6 months is 5.25%/year.
+
+###Self-Fact about the policy document:
+- This decision takes effect from November 20, 2024
+- This decision replaces Decision No. 1124/QD-NHNN dated June 16, 2023
+- This decision stipulates the minimum interest rate for deposits in Vietnamese dong
+- This decision is based on Circular No. 07/2014/TT-NHNN dated March 17, 2014
+- This decision applies to organizations and individuals at credit institutions and foreign bank branches
+- This decision applies the interest rate to deposits that are not withdrawn at the end of the agreed term
+- This decision binds the implementation responsibility of the Head of Office
+- This decision binds the implementation responsibility of the Head of Monetary Policy Department
+- This decision binds the implementation responsibility of the units of the State Bank of Vietnam
+- This decision binds the implementation responsibility of credit institutions
+- This decision binds the implementation responsibility of foreign bank branches
