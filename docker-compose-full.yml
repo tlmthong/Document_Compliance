@@ -4,6 +4,26 @@
 version: '3.8'
 
 services:
+  # Ollama LLM Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: regcompliance_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - regcompliance-network
+    # Uncomment below for GPU support on Linux
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
   # PostgreSQL Database with pgvector
   policy-db:
     image: pgvector/pgvector:pg16
@@ -30,6 +50,9 @@ services:
     build: .
     container_name: regcompliance_db_init
     command: python CreateTablePG.py
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       DB_HOST: policy-db
       DB_PORT: "5432"
@@ -49,23 +72,17 @@ services:
     container_name: regcompliance_policy_api
     command: python PolicyAPI.py
     dns:
-      - 8.8.8.8
-      - 8.8.4.4
       - 1.1.1.1
-    extra_hosts:
-      - "huggingface.co:3.162.66.49"
-      - "cdn-lfs-us-1.huggingface.co:3.160.85.21"
-      - "cdn-lfs.huggingface.co:3.160.85.21"
-      - "host.docker.internal:host-gateway"
+      - 8.8.8.8
     environment:
       DB_HOST: policy-db
       DB_PORT: "5432"
       DB_NAME: policy_db
       DB_USER: postgres
       DB_PASSWORD: postgres
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_KEY: "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"
       HF_HUB_OFFLINE: "0"
-      OLLAMA_HOST: "http://host.docker.internal:11434"
+      OLLAMA_HOST: "http://ollama:11434"
     ports:
       - "8000:8000"
     volumes:
@@ -77,6 +94,8 @@ services:
         condition: service_healthy
       db-init:
         condition: service_completed_successfully
+      ollama:
+        condition: service_started
     networks:
       - regcompliance-network
     restart: unless-stopped
@@ -86,6 +105,9 @@ services:
     build: .
     container_name: regcompliance_process_flow
     command: python ProcessFlow.py
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       DB_HOST: policy-db
       DB_PORT: "5432"
@@ -114,6 +136,9 @@ services:
     build: .
     container_name: regcompliance_judge_flow
     command: python JudgeFlow.py
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       DB_HOST: policy-db
       DB_PORT: "5432"
@@ -164,3 +189,4 @@ networks:
 volumes:
   policy-db-volume:
   hf-cache:
+  ollama-models:

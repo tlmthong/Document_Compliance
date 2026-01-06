@@ -6,296 +6,256 @@ A step-by-step guide to set up the RegCompliance system on your machine.
 
 Before starting, make sure you have:
 
-- **Docker Desktop** installed and running
-  - [Download Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- **Git** (optional, if cloning from repository)
+- **Docker** and **Docker Compose** installed
+  - For VPS: `apt install docker.io docker-compose` (Ubuntu/Debian)
+  - For Desktop: [Download Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - At least **16GB RAM** recommended (for LLM and embedding models)
 - At least **20GB free disk space**
 
 ---
 
-## Step 1: Install and Configure Ollama
-
-Ollama is used to run local LLMs. The application connects to Ollama running on your host machine.
-
-### 1.1 Download and Install Ollama
-
-1. Go to [https://ollama.com/download](https://ollama.com/download)
-2. Download the installer for your OS (Windows/Mac/Linux)
-3. Run the installer and follow the prompts
-
-### 1.2 Pull the Required Model
-
-Open a terminal/command prompt and run:
+## Quick Start (VPS/Linux)
 
 ```bash
-# Pull the model used by the application
-ollama pull gemini-3-flash-preview:cloud
+# 1. Clone/copy project files
+cd RegCompliance
+
+# 2. Start all services (includes Ollama)
+docker-compose -f docker-compose-full.yml up -d
+
+# 3. Wait for Ollama to start, then pull the model
+docker exec -it regcompliance_ollama ollama pull gemma2:2b
+
+# 4. Open browser: http://YOUR_VPS_IP
 ```
-
-> **Note:** If you want to use a different model, you can set the `LLM_MODEL_ID` environment variable in the docker-compose file.
-
-### 1.3 Verify Ollama is Running
-
-```bash
-# Check Ollama is running
-ollama list
-```
-
-You should see the model you pulled listed.
-
-### 1.4 Make Sure Ollama is Accessible
-
-Ollama runs on port `11434` by default. Verify it's running:
-
-```bash
-curl http://localhost:11434/api/tags
-```
-
-Or open `http://localhost:11434` in your browser - you should see "Ollama is running".
 
 ---
 
-## Step 2: Set Up the Project
+## Step 1: Install Docker (VPS/Linux)
 
-### 2.1 Get the Project Files
-
-If you received a zip file:
+### Ubuntu/Debian
 ```bash
-# Extract the zip file to a folder
-unzip RegCompliance.zip -d RegCompliance
-cd RegCompliance
+sudo apt update
+sudo apt install -y docker.io docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Add your user to docker group (logout/login after)
+sudo usermod -aG docker $USER
 ```
 
-If cloning from git:
+### CentOS/RHEL
 ```bash
+sudo yum install -y docker docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+---
+
+## Step 2: Get the Project Files
+
+```bash
+# If you received a zip file
+unzip RegCompliance.zip -d RegCompliance
+cd RegCompliance
+
+# Or clone from git
 git clone <repository-url>
 cd RegCompliance
 ```
 
-### 2.2 Project Structure
+---
 
+## Step 3: Start All Services
+
+```bash
+# Start everything (database, ollama, api services, frontend)
+docker-compose -f docker-compose-full.yml up -d
 ```
-RegCompliance/
-├── docker-compose-full.yml    # Main Docker Compose file
-├── Dockerfile                  # Application container
-├── nginx.conf                  # Reverse proxy config
-├── frontend/                   # Web UI files
-├── prompts/                    # LLM prompt templates
-├── documents/                  # Policy documents
-├── form/                       # Customer form JSONs
-├── import/                     # Imported policy files
-└── utils/                      # Python utilities
+
+This starts:
+- **ollama** - Local LLM server
+- **policy-db** - PostgreSQL with pgvector
+- **policy-api** - Main LLM & embedding API
+- **process-flow** - Policy processing service
+- **judge-flow** - Judgment service
+- **frontend** - Nginx web UI
+
+---
+
+## Step 4: Pull the LLM Model
+
+After containers are running, pull a model into Ollama:
+
+```bash
+# Pull a lightweight model (recommended for VPS)
+docker exec -it regcompliance_ollama ollama pull gemma2:2b
+
+# Or for better quality (needs more RAM)
+docker exec -it regcompliance_ollama ollama pull llama3.1:8b
+
+# Or use your preferred model
+docker exec -it regcompliance_ollama ollama pull <model-name>
+```
+
+### Available Models
+| Model | RAM Required | Quality |
+|-------|--------------|---------|
+| gemma2:2b | ~4GB | Good for testing |
+| llama3.1:8b | ~8GB | Better quality |
+| mistral:7b | ~8GB | Good balance |
+| llama3.1:70b | ~40GB | Best quality |
+
+---
+
+## Step 5: Configure the Model (Optional)
+
+If you use a different model, update the environment variable:
+
+```bash
+# Edit docker-compose-full.yml
+# Find LLM_MODEL_ID in policy-api service and change it
+
+# Or set via environment before starting:
+export LLM_MODEL_ID="gemma2:2b"
+docker-compose -f docker-compose-full.yml up -d
 ```
 
 ---
 
-## Step 3: Start the Application
+## Step 6: Access the Application
 
-### 3.1 Start Docker Desktop
+Open your browser and go to:
 
-Make sure Docker Desktop is running before proceeding.
-
-### 3.2 Start All Services
-
-Open a terminal in the project folder and run:
-
-```bash
-docker-compose -f docker-compose-full.yml up -d --build
-```
-
-This will:
-1. Start PostgreSQL database with pgvector
-2. Initialize the database tables
-3. Start the PolicyAPI service (LLM & embeddings)
-4. Start the ProcessFlow service (policy processing)
-5. Start the JudgeFlow service (compliance judgment)
-6. Start the Nginx frontend
-
-### 3.3 Wait for Services to Start
-
-The first run will take a few minutes as it:
-- Downloads container images
-- Builds the application
-- Downloads the embedding model (~2GB)
-
-Monitor the progress:
-```bash
-docker-compose -f docker-compose-full.yml logs -f
-```
-
-Press `Ctrl+C` to stop watching logs.
-
-### 3.4 Verify All Services are Running
-
-```bash
-docker-compose -f docker-compose-full.yml ps
-```
-
-You should see all services as "running" or "healthy":
-- `regcompliance_db` - PostgreSQL database
-- `regcompliance_policy_api` - LLM API
-- `regcompliance_process_flow` - Policy processor
-- `regcompliance_judge_flow` - Judgment processor
-- `regcompliance_frontend` - Web UI
+**http://YOUR_VPS_IP** (or http://localhost for local)
 
 ---
 
-## Step 4: Access the Application
+## Step 7: Test the API
 
-Open your web browser and go to:
+```bash
+# Test upload policy
+curl -X POST "http://localhost/api/process/store_to_db?policy_id=TEST001" \
+  -F "file=@documents/policy_1.txt"
 
-**http://localhost**
-
-You will see two menus:
-1. **Upload Policy** - Upload and process policy documents
-2. **Judge Customer** - Judge customer forms against policies
+# Test judge customer
+curl -X POST "http://localhost/api/judge/judge_llm?policy_id=TEST001&subject=CUST1" \
+  -F "file=@form/scanned_doc.json"
+```
 
 ---
 
-## Step 5: Using the Application
+## GPU Support (Optional)
 
-### 5.1 Upload a Policy
+For NVIDIA GPU acceleration on Linux VPS:
 
-1. Click **"Upload Policy"** tab
-2. Enter a **Policy ID** (e.g., "POLICY001")
-3. Click **"Choose File"** and select a `.txt` policy document
-4. Click **"Upload & Process"**
-5. Wait for processing to complete
+1. Install NVIDIA Container Toolkit:
+```bash
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo systemctl restart docker
+```
 
-### 5.2 Judge a Customer
+2. Edit `docker-compose-full.yml` and uncomment the GPU section under `ollama` service:
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+```
 
-1. Click **"Judge Customer"** tab
-2. Enter the **Policy ID** (must match an uploaded policy)
-3. Enter a **Subject** identifier (e.g., "CUSTOMER001")
-4. Upload a customer JSON file (see format below)
-5. Click **"Judge Customer"**
-6. View the compliance results
-
-### Customer JSON Format
-
-```json
-{
-    "customer name": "John Doe",
-    "CCCD": "123456789",
-    "Date of issue": "29/03/2022",
-    "Amount in gross": "500,000,000",
-    "Term": "1 months",
-    "Interest rate": "5% p.a",
-    "Deposit method": "Cash",
-    "Rolover type": "Auto"
-}
+3. Restart:
+```bash
+docker-compose -f docker-compose-full.yml up -d
 ```
 
 ---
 
 ## Troubleshooting
 
-### Services won't start
-
+### Check container status
 ```bash
-# Check logs for errors
-docker-compose -f docker-compose-full.yml logs policy-api
-docker-compose -f docker-compose-full.yml logs process-flow
+docker-compose -f docker-compose-full.yml ps
 ```
 
-### Cannot connect to Ollama
-
-Make sure:
-1. Ollama is running on your host machine
-2. The model is pulled: `ollama list`
-3. Port 11434 is not blocked by firewall
-
-### Database connection errors
-
+### View logs
 ```bash
-# Restart the database
-docker-compose -f docker-compose-full.yml restart policy-db
+# All logs
+docker-compose -f docker-compose-full.yml logs -f
 
-# Wait for it to be healthy, then restart other services
-docker-compose -f docker-compose-full.yml restart policy-api process-flow judge-flow
+# Specific service
+docker-compose -f docker-compose-full.yml logs -f policy-api
+docker-compose -f docker-compose-full.yml logs -f ollama
 ```
 
-### Port conflicts
-
-If port 80 is in use:
+### Ollama not responding
 ```bash
-# Edit docker-compose-full.yml and change the frontend port
-# From: "80:80"
-# To: "8080:80"
-# Then access via http://localhost:8080
-```
+# Check if model is pulled
+docker exec -it regcompliance_ollama ollama list
 
-If port 5432 is in use (another PostgreSQL):
-```bash
-# Stop the other PostgreSQL or change the port in docker-compose-full.yml
+# Pull model if missing
+docker exec -it regcompliance_ollama ollama pull gemma2:2b
 ```
 
 ### Reset everything
-
 ```bash
-# Stop and remove all containers and volumes
 docker-compose -f docker-compose-full.yml down -v
+docker-compose -f docker-compose-full.yml up -d
+```
 
-# Start fresh
-docker-compose -f docker-compose-full.yml up -d --build
+### Port already in use
+```bash
+# Check what's using port 80
+sudo lsof -i :80
+
+# Or change port in docker-compose-full.yml
+# frontend ports: "8080:80" instead of "80:80"
 ```
 
 ---
 
 ## Environment Variables
 
-You can customize the application by editing `docker-compose-full.yml`:
-
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OLLAMA_HOST` | Ollama server URL | `http://host.docker.internal:11434` |
-| `LLM_MODEL_ID` | Model to use for LLM | `gemini-3-flash-preview:cloud` |
+| `OLLAMA_HOST` | Ollama server URL | `http://ollama:11434` |
+| `LLM_MODEL_ID` | Model to use | `gemma2:2b` |
 | `DB_HOST` | Database host | `policy-db` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_NAME` | Database name | `policy_db` |
-| `DB_USER` | Database user | `postgres` |
-| `DB_PASSWORD` | Database password | `postgres` |
 
 ---
 
 ## Stopping the Application
 
 ```bash
-# Stop all services (keeps data)
+# Stop (keeps data)
 docker-compose -f docker-compose-full.yml stop
 
-# Stop and remove containers (keeps data volumes)
+# Stop and remove containers (keeps volumes)
 docker-compose -f docker-compose-full.yml down
 
-# Stop and remove everything including data
+# Remove everything including data
 docker-compose -f docker-compose-full.yml down -v
 ```
 
 ---
 
-## Support
+## Firewall (VPS)
 
-If you encounter issues:
-1. Check the logs: `docker-compose -f docker-compose-full.yml logs`
-2. Ensure Ollama is running and accessible
-3. Verify Docker Desktop has enough resources allocated
-4. Try resetting: `docker-compose -f docker-compose-full.yml down -v && docker-compose -f docker-compose-full.yml up -d --build`
+If using UFW:
+```bash
+sudo ufw allow 80/tcp    # Web UI
+sudo ufw allow 443/tcp   # HTTPS (if configured)
+```
 
 ---
-
-## Quick Start Summary
-
-```bash
-# 1. Install Ollama and pull model
-ollama pull gemini-3-flash-preview:cloud
-
-# 2. Start the application
-cd RegCompliance
-docker-compose -f docker-compose-full.yml up -d --build
-
-# 3. Open browser
-# http://localhost
-```
 
 That's it! 🎉
